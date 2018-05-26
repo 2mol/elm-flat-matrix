@@ -311,7 +311,7 @@ indexedMap f matrix =
             in
             f x y v
     in
-    { matrix | data = Array.fromList <| List.indexedMap f_ <| Array.toList matrix.data }
+    { matrix | data = Array.indexedMap f_ matrix.data }
 
 
 {-| Keep only elements that return `True` when passed to the given function f
