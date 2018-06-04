@@ -64,7 +64,7 @@ import Array.Hamt as Array exposing (Array)
 import List
 
 
-{-| Matrix a has a given size, and data contained within
+{-| A Matrix has a shape `m x n`, and stores its data in a flat array.
 -}
 type alias Matrix a =
     { size : ( Int, Int )
@@ -79,48 +79,49 @@ empty =
     { size = ( 0, 0 ), data = Array.empty }
 
 
-{-| Width of a given matrix
--}
-width : Matrix a -> Int
-width matrix =
-    Tuple.first matrix.size
-
-
 {-| Height of a given matrix
 -}
 height : Matrix a -> Int
 height matrix =
+    Tuple.first matrix.size
+
+
+{-| Width of a given matrix
+-}
+width : Matrix a -> Int
+width matrix =
     Tuple.second matrix.size
 
 
 {-| Create a matrix of a given size `x y` with a default value of `v`
 -}
 repeat : Int -> Int -> a -> Matrix a
-repeat x y v =
-    { size = ( x, y )
-    , data = Array.repeat (x * y) v
+repeat m n v =
+    { size = ( m, n )
+    , data = Array.repeat (m * n) v
     }
 
 
 {-| Create a matrix from a list of lists.
 If the lists within the list are not consistently sized, return `Nothing`
-Otherwise return a matrix with the size as the size of the outer and nested lists.
-The outer list represents the y axis and inner lists represent the x axis.
-Eg:
-[ [ {x=0, y=0}, {x=1, y=0}, {x=2, y=0} ]
-, [ {x=0, y=1}, {x=1, y=1}, {x=2, y=1} ]
-, [ {x=0, y=2}, {x=1, y=2}, {x=2, y=2} ]
-]
+Otherwise return a matrix where the inner lists are the columns.
+
+Example:
+
+`fromList [[1,2,3], [4,5,6], [7,8,9]]`
+
+would create the matrix
+
+1 4 7
+2 5 8
+3 6 9
+
 -}
 fromList : List (List a) -> Maybe (Matrix a)
 fromList list =
     let
-        -- the number of elements in the top level list is taken as height
-        height =
-            List.length list
-
-        -- the number of elements in the first element is taken as the width
-        width =
+        -- the number of elements in the first list is taken as the height
+        m =
             List.length <|
                 case List.head list of
                     Just x ->
@@ -129,78 +130,89 @@ fromList list =
                     Nothing ->
                         []
 
-        -- ensure that all "rows" are the same size
-        allSame =
-            List.isEmpty <| List.filter (\x -> List.length x /= width) list
+        -- the number of elements in the top level list is taken as width
+        n =
+            List.length list
+
+        -- ensure that all columns are the same size
+        equalColumns =
+            List.all (\l -> List.length l == m) list
     in
-    if not allSame then
+    if not equalColumns then
         Nothing
     else
-        Just { size = ( width, height ), data = Array.fromList <| List.concat list }
+        Just { size = ( m, n ), data = Array.fromList <| List.concat list }
 
 
-{-| Get a value from a given `x y` and return `Just v` if it exists
-Otherwise `Nothing`
+{-| Get a value from the row-column indices `i, j`. Returns `Nothing` if the indices exceed the shape of the matrix.
 -}
 get : Int -> Int -> Matrix a -> Maybe a
-get i j matrix =
+get i j { size, data } =
     let
+        ( m, n ) =
+            size
+
         pos =
-            (j * width matrix) + i
+            i + (j * m)
     in
-    if (i < width matrix && i > -1) && (j < height matrix && j > -1) then
-        Array.get pos matrix.data
+    if i >= 0 && j >= 0 && i < m && j < n then
+        Array.get pos data
     else
         Nothing
 
 
-{-| Get a row at a given j
+{-| Get a row at a given i
 -}
 getRow : Int -> Matrix a -> Maybe (Array a)
-getRow j matrix =
+getRow i { size, data } =
     let
-        start =
-            j * width matrix
+        ( m, n ) =
+            size
 
-        end =
-            start + width matrix
+        indexHelper : Int -> a -> Maybe a
+        indexHelper index el =
+            if index % m == i then
+                Just el
+            else
+                Nothing
+
+        nothingHelper : Maybe a -> List a -> List a
+        nothingHelper el acc =
+            case el of
+                Just el_ ->
+                    el_ :: acc
+
+                Nothing ->
+                    acc
     in
-    if end > (width matrix * height matrix) then
-        Nothing
+    if i < m then
+        Array.indexedMap indexHelper data
+            |> Array.foldr nothingHelper []
+            |> Array.fromList
+            |> Just
     else
-        Just <| Array.slice start end matrix.data
+        Nothing
 
 
-{-| Get a column at a given i
+{-| Get a column at a given j
 -}
 getColumn : Int -> Matrix a -> Maybe (Array a)
-getColumn i matrix =
+getColumn j { size, data } =
     let
-        width =
-            Tuple.first matrix.size
+        ( m, n ) =
+            size
 
-        height =
-            Tuple.second matrix.size
+        start =
+            m * j
 
-        indices =
-            List.map (\x -> x * width + i) (List.range 0 (height - 1))
+        end =
+            start + m
     in
-    if i >= width then
-        Nothing
+    -- if end > (width matrix * height matrix) then
+    if j < n then
+        Just <| Array.slice start end data
     else
-        Just <|
-            Array.fromList <|
-                List.foldl
-                    (\index ls ->
-                        case Array.get index matrix.data of
-                            Just v ->
-                                ls ++ [ v ]
-
-                            Nothing ->
-                                ls
-                    )
-                    []
-                    indices
+        Nothing
 
 
 {-| Append a matrix to another matrix horizontally and return the result. Return Nothing if the heights don't match
@@ -251,16 +263,19 @@ concatVertical a b =
         Just <| { a | size = ( Tuple.first a.size, Tuple.second a.size + Tuple.second b.size ), data = Array.append a.data b.data }
 
 
-{-| Set a value at a given `i, j` in the matrix and return the new matrix
-If the `i, j` is out of bounds then return the unmodified matrix
+{-| Set a value at a given `i, j` in the matrix and return the new matrix.
+If the `i, j` is out of bounds then return the unmodified matrix.
 -}
 set : Int -> Int -> a -> Matrix a -> Matrix a
 set i j v matrix =
     let
+        ( m, n ) =
+            matrix.size
+
         pos =
-            (j * Tuple.first matrix.size) + i
+            i + (j * m)
     in
-    if (i < width matrix && i > -1) && (j < height matrix && j > -1) then
+    if i >= 0 && j >= 0 && i < m && j < n then
         { matrix | data = Array.set pos v matrix.data }
     else
         matrix
@@ -301,15 +316,12 @@ map2 f a b =
 indexedMap : (Int -> Int -> a -> b) -> Matrix a -> Matrix b
 indexedMap f matrix =
     let
-        f_ i v =
-            let
-                x =
-                    i % width matrix
+        ( m, n ) =
+            matrix.size
 
-                y =
-                    i // width matrix
-            in
-            f x y v
+        f_ : Int -> a -> b
+        f_ i v =
+            f (i % m) (i // m) v
     in
     { matrix | data = Array.indexedMap f_ matrix.data }
 

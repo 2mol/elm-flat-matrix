@@ -147,23 +147,23 @@ getRow =
     describe "GetRow"
         [ test "square get first row" <|
             \() ->
-                equal (Just <| Array.fromList [ 2, 3 ]) <|
+                equal (Just <| Array.fromList [ 2, 1 ]) <|
                     Matrix.getRow 0 <|
                         Maybe.withDefault Matrix.empty (Matrix.fromList [ [ 2, 3 ], [ 1, 1 ] ])
         , test "square get last row" <|
             \() ->
-                equal (Just <| Array.fromList [ 1, 1 ]) <|
+                equal (Just <| Array.fromList [ 3, 1 ]) <|
                     Matrix.getRow 1 <|
                         Maybe.withDefault Matrix.empty (Matrix.fromList [ [ 2, 3 ], [ 1, 1 ] ])
         , test "non-square get last row 2x3" <|
             \() ->
-                equal (Just <| Array.fromList [ 4, 5 ]) <|
-                    Matrix.getRow 2 <|
+                equal (Just <| Array.fromList [ 3, 1, 5 ]) <|
+                    Matrix.getRow 1 <|
                         Maybe.withDefault Matrix.empty (Matrix.fromList [ [ 2, 3 ], [ 1, 1 ], [ 4, 5 ] ])
         , test "non-square get last row 3x2" <|
             \() ->
-                equal (Just <| Array.fromList [ 1, 1, 5 ]) <|
-                    Matrix.getRow 1 <|
+                equal (Just <| Array.fromList [ 4, 5 ]) <|
+                    Matrix.getRow 2 <|
                         Maybe.withDefault Matrix.empty (Matrix.fromList [ [ 2, 3, 4 ], [ 1, 1, 5 ] ])
         , test "square get invalid range" <|
             \() ->
@@ -183,33 +183,33 @@ getColumn =
     describe "GetColumn"
         [ test "square get first column 2x2" <|
             \() ->
-                equal (Just <| Array.fromList [ 2, 1 ]) <|
+                equal (Just <| Array.fromList [ 2, 3 ]) <|
                     Matrix.getColumn 0 <|
                         Maybe.withDefault Matrix.empty (Matrix.fromList [ [ 2, 3 ], [ 1, 6 ] ])
         , test "square get last column 2x2" <|
             \() ->
-                equal (Just <| Array.fromList [ 3, 6 ]) <|
+                equal (Just <| Array.fromList [ 1, 6 ]) <|
                     Matrix.getColumn 1 <|
                         Maybe.withDefault Matrix.empty (Matrix.fromList [ [ 2, 3 ], [ 1, 6 ] ])
         , test "non-square get first column 3x2" <|
             \() ->
-                equal (Just <| Array.fromList [ 2, 1, 3 ]) <|
+                equal (Just <| Array.fromList [ 2, 3 ]) <|
                     Matrix.getColumn 0 <|
                         Maybe.withDefault Matrix.empty (Matrix.fromList [ [ 2, 3 ], [ 1, 6 ], [ 3, 9 ] ])
         , test "non-square get last column 3x2" <|
             \() ->
-                equal (Just <| Array.fromList [ 3, 6, 9 ]) <|
-                    Matrix.getColumn 1 <|
+                equal (Just <| Array.fromList [ 3, 9 ]) <|
+                    Matrix.getColumn 2 <|
                         Maybe.withDefault Matrix.empty (Matrix.fromList [ [ 2, 3 ], [ 1, 6 ], [ 3, 9 ] ])
         , test "non-square get first column 2x3" <|
             \() ->
-                equal (Just <| Array.fromList [ 2, 1 ]) <|
+                equal (Just <| Array.fromList [ 2, 3, 3 ]) <|
                     Matrix.getColumn 0 <|
                         Maybe.withDefault Matrix.empty (Matrix.fromList [ [ 2, 3, 3 ], [ 1, 6, 9 ] ])
         , test "non-square get last column 2x3" <|
             \() ->
-                equal (Just <| Array.fromList [ 3, 9 ]) <|
-                    Matrix.getColumn 2 <|
+                equal (Just <| Array.fromList [ 1, 6, 9 ]) <|
+                    Matrix.getColumn 1 <|
                         Maybe.withDefault Matrix.empty (Matrix.fromList [ [ 2, 3, 3 ], [ 1, 6, 9 ] ])
         , test "get invalid range" <|
             \() ->
